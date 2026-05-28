@@ -73,8 +73,8 @@ export default function WindowCloseDialog({
                 <Minimize2 size={18} />
               </span>
               <span className="window-close-dialog-option-text">
-                <strong>最小化到系统托盘</strong>
-                <span>继续保留后台进程和本地 API，稍后可从托盘恢复。</span>
+                <strong>隐藏到系统后台</strong>
+                <span>继续保留后台进程和本地 API，稍后可按Ctrl+Shift+W恢复。</span>
               </span>
             </button>
           )}
