@@ -817,14 +817,6 @@ const isSilentStartupEnabled = (): boolean => {
   return configService?.get('silentStartup') === true
 }
 
-const requestMainWindowCloseConfirmation = (win: BrowserWindow): void => {
-  if (isClosePromptVisible) return
-  isClosePromptVisible = true
-  win.webContents.send('window:confirmCloseRequested', {
-    canMinimizeToTray: Boolean(tray)
-  })
-}
-
 function createWindow(options: { autoShow?: boolean } = {}) {
   // 获取图标路径 - 打包后在 resources 目录
   const { autoShow = true } = options
@@ -912,12 +904,10 @@ function createWindow(options: { autoShow?: boolean } = {}) {
       return
     }
 
-    if (closeBehavior === 'tray' && tray) {
+    if (closeBehavior === 'tray') {
       win.hide()
       return
     }
-
-    requestMainWindowCloseConfirmation(win)
   })
 
   win.on('closed', () => {
@@ -2113,11 +2103,8 @@ function registerIpcHandlers() {
 
     try {
       if (action === 'tray') {
-        if (tray) {
-          mainWindow.hide()
-          return true
-        }
-        return false
+        mainWindow.hide()
+        return true
       }
 
       if (action === 'quit') {
