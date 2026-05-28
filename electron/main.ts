@@ -1,5 +1,5 @@
 ﻿import './preload-env'
-import { app, BrowserWindow, ipcMain, nativeTheme, session, globalShortcut, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, ipcMain, nativeTheme, session, Tray, globalShortcut, Menu, nativeImage } from 'electron'
 import { Worker } from 'worker_threads'
 import { randomUUID } from 'crypto'
 import { join, dirname } from 'path'
@@ -412,6 +412,7 @@ let mainWindowReady = false
 let shouldShowMain = true
 let isAppQuitting = false
 let shutdownPromise: Promise<void> | null = null
+let tray: Tray | null = null
 let isClosePromptVisible = false
 
 interface ChatHistoryPayloadEntry {
