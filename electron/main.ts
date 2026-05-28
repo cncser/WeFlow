@@ -1,5 +1,5 @@
 ﻿import './preload-env'
-import { app, BrowserWindow, ipcMain, nativeTheme, session, Tray, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, ipcMain, nativeTheme, session, globalShortcut, Menu, nativeImage } from 'electron'
 import { Worker } from 'worker_threads'
 import { randomUUID } from 'crypto'
 import { join, dirname } from 'path'
@@ -412,7 +412,6 @@ let mainWindowReady = false
 let shouldShowMain = true
 let isAppQuitting = false
 let shutdownPromise: Promise<void> | null = null
-let tray: Tray | null = null
 let isClosePromptVisible = false
 
 interface ChatHistoryPayloadEntry {
@@ -4263,54 +4262,7 @@ app.whenReady().then(async () => {
   }
 
   const isDev = !!process.env.VITE_DEV_SERVER_URL
-
-  const resolvedTrayIcon = isDev
-      ? join(__dirname, `../public/${iconName}`)
-      : join(process.resourcesPath, iconName);
-
-
-  try {
-    tray = new Tray(resolvedTrayIcon)
-    tray.setToolTip('WeFlow')
-    const contextMenu = Menu.buildFromTemplate([
-      {
-        label: '显示主窗口',
-        click: () => {
-          if (mainWindow) {
-            mainWindow.show()
-            mainWindow.focus()
-          }
-        }
-      },
-      { type: 'separator' },
-      {
-        label: '退出',
-        click: () => {
-          isAppQuitting = true
-          app.quit()
-        }
-      }
-    ])
-    tray.setContextMenu(contextMenu)
-    tray.on('click', () => {
-      if (mainWindow) {
-        if (mainWindow.isVisible()) {
-          mainWindow.focus()
-        } else {
-          mainWindow.show()
-          mainWindow.focus()
-        }
-      }
-    })
-    tray.on('double-click', () => {
-      if (mainWindow) {
-        mainWindow.show()
-        mainWindow.focus()
-      }
-    })
-  } catch (e) {
-    console.warn('[Tray] Failed to create tray icon:', e)
-  }
+ 
 
   // 等待主窗口加载完成（真正耗时阶段，进度条末端呼吸光点）
   updateSplashProgress(70, '正在准备主窗口...', true)
@@ -4332,10 +4284,24 @@ app.whenReady().then(async () => {
 
   if (!onboardingDone) {
     createOnboardingWindow()
-  } else if (startInBackground && tray) {
+  } else if (startInBackground) {
     mainWindow?.hide()
   } else {
     mainWindow?.show()
+  }
+
+  const isShortcutRegistered = globalShortcut.register('CommandOrControl+Shift+W', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore() // 如果最小化了则恢复
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+  
+  if (!isShortcutRegistered) {
+    console.warn('[Shortcut] 快捷键 CommandOrControl+Shift+W 注册失败')
+  } else {
+    console.log('[Shortcut] 快捷键 CommandOrControl+Shift+W 注册成功')
   }
 
   // 启动时检测更新（不阻塞启动）
@@ -4354,8 +4320,8 @@ const shutdownAppServices = async (): Promise<void> => {
   if (shutdownPromise) return shutdownPromise
   shutdownPromise = (async () => {
     isAppQuitting = true
-    // 销毁 tray 图标
-    if (tray) { try { tray.destroy() } catch {} tray = null }
+    // 直接注销所有全局快捷键
+    globalShortcut.unregisterAll()
     // 通知窗使用 hide 而非 close，退出时主动销毁，避免残留窗口阻塞进程退出。
     destroyNotificationWindow()
     messagePushService.stop()
